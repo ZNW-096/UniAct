@@ -1,4 +1,4 @@
-# uniact
+# UniAct
 
 A new Flutter project.
 

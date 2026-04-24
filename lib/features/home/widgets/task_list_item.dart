@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../core/atoms/body_text.dart';
-import '../../../core/atoms/app_icon_button.dart';
-import '../../../core/atoms/app_divider.dart';
 import '../../../core/theme/app_spacing.dart';
 
 class TaskListItem extends StatelessWidget {
@@ -22,45 +19,79 @@ class TaskListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final titleStyle = theme.textTheme.titleMedium?.copyWith(
+      decoration: isCompleted ? TextDecoration.lineThrough : null,
+    );
+    final timeStyle = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+      decoration: isCompleted ? TextDecoration.lineThrough : null,
+    );
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         InkWell(
           onTap: onTap,
-          child: Padding(
+          borderRadius: const BorderRadius.all(
+            Radius.circular(AppSpacing.radiusLarge),
+          ),
+          child: Container(
+            width: double.infinity,
             padding: const EdgeInsets.all(AppSpacing.space16),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: const BorderRadius.all(
+                Radius.circular(AppSpacing.radiusLarge),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.colorScheme.shadow.withValues(alpha: 0.2),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      BodyText(text: title, maxLines: 1),
-                      const SizedBox(height: 4),
-                      BodyText(
-                        text: timeLabel,
-                        maxLines: 1,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ],
+                SizedBox(
+                  width: AppSpacing.minTouchTarget,
+                  height: AppSpacing.minTouchTarget,
+                  child: Checkbox(
+                    value: isCompleted,
+                    onChanged: (_) => onToggle(),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.space8),
-                AppIconButton(
-                  icon: isCompleted
-                      ? Icons.check_circle
-                      : Icons.radio_button_unchecked,
-                  onTap: onToggle,
-                  semanticLabel:
-                      isCompleted ? 'Mark as incomplete' : 'Mark as complete',
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Opacity(
+                    opacity: isCompleted ? 0.75 : 1,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: titleStyle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          timeLabel,
+                          style: timeStyle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
         ),
-        const AppDivider(verticalSpacing: 0),
       ],
     );
   }

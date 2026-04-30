@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import '../../../models/task_model.dart';
 import '../../../models/time_range.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/state/async_state.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../task/providers/task_provider.dart';
 import '../widgets/today_progress_section.dart';
 import '../widgets/task_list_item.dart';
@@ -17,6 +19,53 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  Future<void> _confirmAndDeleteData() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete your data permanently?'),
+          content: const Text(
+            'This will permanently remove your tasks, focus sessions, and account data. This action cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error,
+                foregroundColor: Theme.of(context).colorScheme.onError,
+              ),
+              child: const Text('Delete permanently'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.deleteMyDataAndAccount();
+    if (!mounted || success) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          authProvider.errorMessage ??
+              'Could not delete your data. Please try again.',
+        ),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -28,6 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _toggleTask(Task task) async {
     final updatedTask = Task(
       id: task.id,
+      userId: task.userId,
       title: task.title,
       notes: task.notes,
       timeRange: task.timeRange,
@@ -52,25 +102,29 @@ class _HomeScreenState extends State<HomeScreen> {
     final tasks = taskProvider.tasks;
     final completed = tasks.where((task) => task.isCompleted).length;
     final total = tasks.length;
+    final taskStatus = taskProvider.listStatus;
 
     return Scaffold(
+      appBar: AppBar(
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'delete_data') {
+                _confirmAndDeleteData();
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem<String>(
+                value: 'delete_data',
+                child: Text('Delete my data'),
+              ),
+            ],
+          ),
+        ],
+      ),
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.space8),
-            child: FloatingActionButton.extended(
-              heroTag: 'start_focus',
-              onPressed: tasks.isEmpty
-                  ? null
-                  : () => context.go(
-                        '/session?duration=25',
-                        extra: tasks.first,
-                      ),
-              label: const Text('Start Focus'),
-              icon: const Icon(Icons.timer),
-            ),
-          ),
           FloatingActionButton(
             heroTag: 'add_task',
             onPressed: () => context.go('/task-create'),
@@ -79,35 +133,76 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TodayProgressSection(
-              completed: completed,
-              total: total,
-            ),
-            const SizedBox(height: AppSpacing.space8),
-            Expanded(
-              child: taskProvider.isLoading && tasks.isEmpty
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 700),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TodayProgressSection(
+                  completed: completed,
+                  total: total,
+                ),
+                const SizedBox(height: AppSpacing.space8),
+                Expanded(
+              child: taskStatus == AsyncStatus.loading && tasks.isEmpty
                   ? const Center(child: CircularProgressIndicator())
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.space16,
-                      ),
-                      itemCount: tasks.length,
-                      itemBuilder: (context, index) {
-                        final task = tasks[index];
-                        return TaskListItem(
-                          title: task.title,
-                          timeLabel: _buildTimeLabel(task.timeRange),
-                          isCompleted: task.isCompleted,
-                          onToggle: () => _toggleTask(task),
-                          onTap: () => context.go('/task-detail/${task.id}'),
-                        );
-                      },
-                    ),
+                  : taskStatus == AsyncStatus.error && tasks.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.space24,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  taskProvider.listErrorMessage ?? 'Error loading tasks',
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                                const SizedBox(height: AppSpacing.space16),
+                                ElevatedButton(
+                                  onPressed: taskProvider.listenToTasks,
+                                  child: const Text('Retry'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : tasks.isEmpty
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.space24,
+                                ),
+                                child: Text(
+                                  'No tasks yet. Tap + to create your first task.',
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.space16,
+                          ),
+                          itemCount: tasks.length,
+                          itemBuilder: (context, index) {
+                            final task = tasks[index];
+                            return TaskListItem(
+                              title: task.title,
+                              timeLabel: _buildTimeLabel(task.timeRange),
+                              isCompleted: task.isCompleted,
+                              onToggle: () => _toggleTask(task),
+                              onTap: () => context.go('/task-detail/${task.id}'),
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

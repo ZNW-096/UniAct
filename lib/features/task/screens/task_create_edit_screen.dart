@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_spacing.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../../models/task_model.dart';
 import '../../../models/time_range.dart';
 import '../providers/task_provider.dart';
@@ -27,6 +28,7 @@ class _TaskCreateEditScreenState extends State<TaskCreateEditScreen> {
   late final TextEditingController _notesController;
   DateTime? _startTime;
   DateTime? _endTime;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -101,12 +103,29 @@ class _TaskCreateEditScreenState extends State<TaskCreateEditScreen> {
   Future<void> _saveTask() async {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Task title cannot be empty')),
+      );
       return;
+    }
+
+    if (_isSaving) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    final currentUserId = context.read<AuthProvider>().userId;
+    if (currentUserId == null) {
+      throw StateError('User must be signed in to save a task');
     }
 
     final notes = _notesController.text.trim();
     final task = Task(
       id: widget.task?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      userId: widget.task?.userId ?? currentUserId,
       title: title,
       notes: notes.isEmpty ? null : notes,
       timeRange: _startTime == null && _endTime == null
@@ -120,21 +139,46 @@ class _TaskCreateEditScreenState extends State<TaskCreateEditScreen> {
     } else {
       await context.read<TaskProvider>().updateTask(task);
     }
+
     if (!mounted) {
       return;
     }
+
     context.go('/home');
+  }
+
+  Future<void> _handleSaveTask() async {
+    try {
+      await _saveTask();
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error saving task: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.space16,
-          ),
-          child: Column(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 700),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.space16,
+              ),
+              child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               TaskInputSection(
@@ -150,10 +194,17 @@ class _TaskCreateEditScreenState extends State<TaskCreateEditScreen> {
               ),
               const SizedBox(height: AppSpacing.space24),
               FormActionSection(
-                onSave: _saveTask,
-                onCancel: () => context.go('/home'),
+                onSave: _handleSaveTask,
+                onCancel: () {
+                  if (_isSaving) {
+                    return;
+                  }
+                  context.go('/home');
+                },
               ),
             ],
+              ),
+            ),
           ),
         ),
       ),

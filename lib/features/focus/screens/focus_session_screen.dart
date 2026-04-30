@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/responsive_body.dart';
 import '../../../models/task_model.dart';
 import '../providers/focus_session_provider.dart';
 import '../widgets/focus_session_control_panel.dart';
@@ -82,65 +83,68 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: Center(
+        child: ResponsiveBody(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.space16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  widget.task.title,
-                  style: theme.textTheme.titleMedium,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: AppSpacing.space24),
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Container(
-                      width: 220,
-                      height: 220,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surface,
-                        shape: BoxShape.circle,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final timerSize = (constraints.maxWidth * 0.7).clamp(140.0, 240.0);
+                return SingleChildScrollView(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: timerSize,
+                            height: timerSize,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surface,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          SizedBox(
+                            width: timerSize,
+                            height: timerSize,
+                            child: CircularProgressIndicator(
+                              value: progress,
+                              strokeWidth: 10,
+                            ),
+                          ),
+                          SizedBox(
+                            width: timerSize * 0.8,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.center,
+                              child: Text(
+                                _formatRemainingSeconds(provider.remainingSeconds),
+                                style: theme.textTheme.headlineLarge,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    SizedBox(
-                      width: 220,
-                      height: 220,
-                      child: CircularProgressIndicator(
-                        value: progress,
-                        strokeWidth: 10,
+                      const SizedBox(height: AppSpacing.space32),
+                      FocusSessionControlPanel(
+                        onPauseResume: _pauseResumeAction(provider),
+                        onStop: () {
+                          context.read<FocusSessionProvider>().stopSession();
+                          if (context.canPop()) {
+                            context.pop();
+                          } else {
+                            context.go('/home');
+                          }
+                        },
+                        isRunning: provider.isRunning,
+                        isPaused: provider.isPaused,
                       ),
-                    ),
-                    Text(
-                      _formatRemainingSeconds(provider.remainingSeconds),
-                      style: theme.textTheme.headlineLarge,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.space32),
-                FocusSessionControlPanel(
-                  onStart: () => context
-                      .read<FocusSessionProvider>()
-                      .startSession(widget.task, widget.durationMinutes),
-                  onPauseResume: _pauseResumeAction(provider),
-                  onStop: () {
-                    context.read<FocusSessionProvider>().stopSession();
-                    if (context.canPop()) {
-                      context.pop();
-                    } else {
-                      context.go('/home');
-                    }
-                  },
-                  isRunning: provider.isRunning,
-                  isPaused: provider.isPaused,
-                ),
-              ],
+                    ],
+                  ),
+                );
+              },
             ),
           ),
         ),

@@ -19,6 +19,7 @@ class FocusSessionProvider extends ChangeNotifier {
   bool _isPaused = false;
   bool _isCompleted = false;
   Timer? _timer;
+  String? _errorMessage;
 
   FocusSession? get currentSession => _currentSession;
   int get totalSeconds => _totalSeconds;
@@ -26,6 +27,7 @@ class FocusSessionProvider extends ChangeNotifier {
   bool get isRunning => _isRunning;
   bool get isPaused => _isPaused;
   bool get isCompleted => _isCompleted;
+  String? get errorMessage => _errorMessage;
 
   void startSession(Task task, int durationMinutes) {
     _timer?.cancel();
@@ -33,6 +35,7 @@ class FocusSessionProvider extends ChangeNotifier {
     final now = DateTime.now();
     _currentSession = FocusSession(
       id: now.microsecondsSinceEpoch.toString(),
+      userId: task.userId,
       taskId: task.id,
       durationMinutes: durationMinutes,
       startTime: now,
@@ -46,7 +49,7 @@ class FocusSessionProvider extends ChangeNotifier {
     _isCompleted = false;
 
     notifyListeners();
-    unawaited(_focusSessionService.addSession(_currentSession!));
+    _saveSessionWithErrorHandling(_currentSession!);
 
     if (_remainingSeconds == 0) {
       completeSession();
@@ -110,6 +113,7 @@ class FocusSessionProvider extends ChangeNotifier {
     _timer?.cancel();
     final completedSession = FocusSession(
       id: _currentSession!.id,
+      userId: _currentSession!.userId,
       taskId: _currentSession!.taskId,
       durationMinutes: _currentSession!.durationMinutes,
       startTime: _currentSession!.startTime,
@@ -124,7 +128,21 @@ class FocusSessionProvider extends ChangeNotifier {
     _isCompleted = true;
     notifyListeners();
 
-    unawaited(_focusSessionService.updateSession(completedSession));
+    _saveSessionWithErrorHandling(completedSession);
+  }
+
+  Future<void> _saveSessionWithErrorHandling(FocusSession session) async {
+    try {
+      if (session.isCompleted) {
+        await _focusSessionService.updateSession(session);
+      } else {
+        await _focusSessionService.addSession(session);
+      }
+      _errorMessage = null;
+    } catch (e) {
+      _errorMessage = 'Failed to save session: ${e.toString()}';
+      notifyListeners();
+    }
   }
 
   @override

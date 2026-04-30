@@ -3,6 +3,7 @@ import 'time_range.dart';
 class Task {
 	const Task({
 		required this.id,
+		required this.userId,
 		required this.title,
 		this.notes,
 		this.timeRange,
@@ -10,6 +11,7 @@ class Task {
 	});
 
 	final String id;
+	final String userId;
 	final String title;
 	final String? notes;
 	final TimeRange? timeRange;
@@ -20,6 +22,7 @@ class Task {
 
 		return Task(
 			id: _requireString(json, 'id'),
+			userId: _requireString(json, 'userId'),
 			title: _requireString(json, 'title'),
 			notes: json['notes'] as String?,
 			timeRange: timeRangeValue is Map<Object?, Object?>
@@ -34,6 +37,7 @@ class Task {
 	Map<String, Object?> toJson() {
 		return <String, Object?>{
 			'id': id,
+			'userId': userId,
 			'title': title,
 			'notes': notes,
 			'timeRange': timeRange?.toJson(),

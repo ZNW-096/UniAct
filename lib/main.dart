@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'core/state/async_state.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/providers/auth_provider.dart';
@@ -65,7 +66,7 @@ class _AppInitializerState extends State<AppInitializer> {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
-    final isAuthReady = !authProvider.isLoading && authProvider.userId != null;
+    final isAuthReady = authProvider.status == AsyncStatus.success && authProvider.userId != null;
     if (!isAuthReady) {
       return const _StartupGate();
     }
@@ -93,12 +94,53 @@ class _StartupGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+    final hasError = authProvider.status == AsyncStatus.error;
+    final isLoading = authProvider.status == AsyncStatus.loading;
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const Scaffold(
+      home: Scaffold(
         body: Center(
-          child: CircularProgressIndicator(),
+          child: hasError
+              ? Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: Colors.red,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        authProvider.errorMessage ??
+                            'Failed to sign in. Please check your connection and try again.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: () {
+                          context.read<AuthProvider>().signInAnonymously();
+                        },
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                )
+              : isLoading
+                  ? const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text('Signing in...'),
+                      ],
+                    )
+                  : const SizedBox.shrink(),
         ),
       ),
     );

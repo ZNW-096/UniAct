@@ -39,6 +39,24 @@ class TaskDetailScreen extends StatelessWidget {
     context.go('/task-create', extra: task);
   }
 
+  Future<void> _deleteTask(BuildContext context, Task task) async {
+    try {
+      await context.read<TaskProvider>().deleteTask(task.id);
+      if (context.mounted) {
+        context.go('/home');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting task: $e'),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildInfoBox(
     BuildContext context, {
     required String label,
@@ -98,68 +116,90 @@ class TaskDetailScreen extends StatelessWidget {
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.space16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildInfoBox(
-                        context,
-                        label: 'Task Title',
-                        value: task.title,
-                      ),
-                      _buildInfoBox(
-                        context,
-                        label: 'Time Range',
-                        value: _formatTimeLabel(context, task.timeRange),
-                      ),
-                      _buildInfoBox(
-                        context,
-                        label: 'Notes',
-                        value: task.notes ?? 'No notes',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.space24),
-              SizedBox(
-                height: 48,
-                child: PrimaryButton(
-                  label: 'Edit Task',
-                  onPressed: () => _editTask(context, task),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.space16),
-              SizedBox(
-                height: 48,
-                child: OutlinedButton(
-                  onPressed: () => context.go('/home'),
-                  style: OutlinedButton.styleFrom(
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.all(
-                        Radius.circular(AppSpacing.radiusDefault),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 700),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.space16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildInfoBox(
+                            context,
+                            label: 'Task Title',
+                            value: task.title,
+                          ),
+                          _buildInfoBox(
+                            context,
+                            label: 'Time Range',
+                            value: _formatTimeLabel(context, task.timeRange),
+                          ),
+                          _buildInfoBox(
+                            context,
+                            label: 'Notes',
+                            value: task.notes ?? 'No notes',
+                          ),
+                        ],
                       ),
                     ),
-                    minimumSize: const Size(
-                      double.infinity,
-                      48,
+                  ),
+                  const SizedBox(height: AppSpacing.space24),
+                  SizedBox(
+                    height: 48,
+                    child: PrimaryButton(
+                      label: 'Edit Task',
+                      onPressed: () => _editTask(context, task),
                     ),
                   ),
-                  child: Text(
-                    'Cancel',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelLarge,
+                  const SizedBox(height: AppSpacing.space16),
+                  SizedBox(
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () => _deleteTask(context, task),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.error,
+                        foregroundColor: Colors.white,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(
+                            Radius.circular(AppSpacing.radiusDefault),
+                          ),
+                        ),
+                      ),
+                      child: const Text('Delete Task'),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: AppSpacing.space16),
+                  SizedBox(
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: () => context.go('/home'),
+                      style: OutlinedButton.styleFrom(
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(
+                            Radius.circular(AppSpacing.radiusDefault),
+                          ),
+                        ),
+                        minimumSize: const Size(
+                          double.infinity,
+                          48,
+                        ),
+                      ),
+                      child: Text(
+                        'Cancel',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

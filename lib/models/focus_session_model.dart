@@ -1,6 +1,7 @@
 class FocusSession {
   const FocusSession({
     required this.id,
+    required this.userId,
     required this.taskId,
     required this.durationMinutes,
     required this.startTime,
@@ -9,6 +10,7 @@ class FocusSession {
   });
 
   final String id;
+  final String userId;
   final String taskId;
   final int durationMinutes;
   final DateTime startTime;
@@ -18,6 +20,7 @@ class FocusSession {
   factory FocusSession.fromJson(Map<String, Object?> json) {
     return FocusSession(
       id: _requireString(json, 'id'),
+      userId: _requireString(json, 'userId'),
       taskId: _requireString(json, 'taskId'),
       durationMinutes: _requireInt(json, 'durationMinutes'),
       startTime: _requireDateTime(json, 'startTime'),
@@ -29,6 +32,7 @@ class FocusSession {
   Map<String, Object?> toJson() {
     return <String, Object?>{
       'id': id,
+      'userId': userId,
       'taskId': taskId,
       'durationMinutes': durationMinutes,
       'startTime': startTime.toIso8601String(),

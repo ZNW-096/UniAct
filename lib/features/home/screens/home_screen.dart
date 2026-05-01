@@ -19,6 +19,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  
+
   Future<void> _confirmAndDeleteData() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -86,6 +88,11 @@ class _HomeScreenState extends State<HomeScreen> {
     await context.read<TaskProvider>().updateTask(updatedTask);
   }
 
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
   String _buildTimeLabel(TimeRange? timeRange) {
     if (timeRange == null || timeRange.start == null || timeRange.end == null) {
       return 'No schedule';
@@ -147,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Expanded(
               child: taskStatus == AsyncStatus.loading && tasks.isEmpty
                   ? const Center(child: CircularProgressIndicator())
-                  : taskStatus == AsyncStatus.error && tasks.isEmpty
+                  : taskStatus == AsyncStatus.error && taskProvider.showTimeoutMessage
                       ? Center(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
@@ -157,7 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  taskProvider.listErrorMessage ?? 'Error loading tasks',
+                                  'Timed out waiting for tasks. We found tasks in your account but the app did not receive updates within 10 seconds. Tap Retry to try again.',
                                   textAlign: TextAlign.center,
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),

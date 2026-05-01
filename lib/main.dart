@@ -5,6 +5,8 @@ import 'core/state/async_state.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/providers/auth_provider.dart';
+import 'features/auth/providers/consent_provider.dart';
+import 'features/auth/screens/consent_screen.dart';
 import 'features/focus/providers/focus_session_provider.dart';
 import 'features/task/providers/task_provider.dart';
 import 'firebase_options.dart';
@@ -30,6 +32,9 @@ class UniActRoot extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider<ConsentProvider>(
+          create: (_) => ConsentProvider(),
+        ),
         ChangeNotifierProvider<AuthProvider>(
           create: (_) => AuthProvider(authService: AuthService()),
         ),
@@ -66,9 +71,17 @@ class _AppInitializerState extends State<AppInitializer> {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
+    final consentProvider = context.watch<ConsentProvider>();
+    
     final isAuthReady = authProvider.status == AsyncStatus.success && authProvider.userId != null;
+    final isConsentAccepted = consentProvider.consentAccepted;
+    
     if (!isAuthReady) {
       return const _StartupGate();
+    }
+    
+    if (!isConsentAccepted) {
+      return const _ConsentGate();
     }
 
     return const UniActApp();
@@ -142,6 +155,28 @@ class _StartupGate extends StatelessWidget {
                     )
                   : const SizedBox.shrink(),
         ),
+      ),
+    );
+  }
+}
+
+class _ConsentGate extends StatelessWidget {
+  const _ConsentGate();
+
+  static const String _privacyPolicyUrl =
+      'https://example.com/privacy-policy'; // Update with actual URL
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.darkTheme,
+      home: ConsentScreen(
+        privacyPolicyUrl: _privacyPolicyUrl,
+        onConsented: () {
+          // Navigate back to AppInitializer to check consent state
+          // This will trigger a rebuild and show the main app
+        },
       ),
     );
   }

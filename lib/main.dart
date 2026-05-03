@@ -164,7 +164,7 @@ class _ConsentGate extends StatelessWidget {
   const _ConsentGate();
 
   static const String _privacyPolicyUrl =
-      'https://example.com/privacy-policy'; // Update with actual URL
+      'https://www.termsfeed.com/live/b9a6d5f3-149c-48a5-869a-50087462c30b'; 
 
   @override
   Widget build(BuildContext context) {
